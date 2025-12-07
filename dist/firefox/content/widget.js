@@ -1,180 +1,362 @@
-// widget.js - Floating widget with Shadow DOM isolation
+// widget.js - Draggable minimal toolbar with dock-to-edge
 class ReadtilsWidget {
   constructor(options) {
     this.options = options;
-    this.isExpanded = false;
     this.isVisible = false;
+    this.isDocked = false;
     this.container = null;
     this.shadowRoot = null;
+    
+    // Position state
+    this.position = { x: 0, y: 0 };
+    this.isDragging = false;
+    this.dragOffset = { x: 0, y: 0 };
+    this.velocity = { x: 0, y: 0 };
+    this.lastMousePos = { x: 0, y: 0 };
+    this.lastMoveTime = 0;
+    
+    // Edge detection
+    this.DOCK_THRESHOLD = 60;
+    this.EDGE_MARGIN = 16;
+    this.TOOLBAR_WIDTH = 110;
+    
+    // Storage key
+    this.STORAGE_KEY = 'readtils_widget_state';
+    this.api = typeof browser !== 'undefined' ? browser : chrome;
+  }
+
+  async loadState() {
+    try {
+      const result = await this.api.storage.local.get(this.STORAGE_KEY);
+      return result[this.STORAGE_KEY] || {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  async saveState() {
+    try {
+      await this.api.storage.local.set({
+        [this.STORAGE_KEY]: {
+          position: this.position,
+          isDocked: this.isDocked
+        }
+      });
+    } catch (e) {}
   }
 
   render() {
-    // Create host element
     this.container = document.createElement('div');
     this.container.id = 'readtils-widget-host';
-
-    // Attach Shadow DOM for style isolation
     this.shadowRoot = this.container.attachShadow({ mode: 'closed' });
 
-    // Inject styles and HTML into shadow root
     this.shadowRoot.innerHTML = `
       <style>
         :host {
           all: initial;
           position: fixed;
-          bottom: 20px;
-          right: 20px;
           z-index: 2147483647;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
         }
 
-        .widget-container {
+        * {
+          box-sizing: border-box;
+        }
+
+        .toolbar {
           display: none;
-          flex-direction: column;
-          align-items: flex-end;
-          gap: 8px;
+          position: fixed;
+          user-select: none;
+          touch-action: none;
         }
 
-        .widget-container.visible {
+        .toolbar.visible {
           display: flex;
         }
 
-        .widget-fab {
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
-          background: #2563eb;
-          border: none;
-          cursor: pointer;
+        .toolbar-inner {
           display: flex;
           align-items: center;
-          justify-content: center;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-          transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
-        }
-
-        .widget-fab:hover {
-          transform: scale(1.05);
-          box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-        }
-
-        .widget-fab.expanded {
-          background: #1d4ed8;
-        }
-
-        .widget-fab svg {
-          width: 24px;
-          height: 24px;
-          fill: white;
-          transition: transform 0.2s;
-        }
-
-        .widget-fab.expanded svg {
-          transform: rotate(45deg);
-        }
-
-        .widget-menu {
-          display: none;
-          flex-direction: column;
-          gap: 6px;
-          padding: 8px;
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-          opacity: 0;
-          transform: translateY(10px);
-          transition: opacity 0.2s, transform 0.2s;
-        }
-
-        .widget-menu.expanded {
-          display: flex;
-          opacity: 1;
-          transform: translateY(0);
-        }
-
-        .menu-button {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 10px 14px;
-          border: none;
-          background: #f3f4f6;
+          gap: 1px;
+          padding: 3px;
+          background: rgba(24, 24, 27, 0.95);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 8px;
-          cursor: pointer;
-          font-size: 13px;
-          font-weight: 500;
-          color: #374151;
-          transition: background 0.15s;
-          white-space: nowrap;
+          transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                      border-radius 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                      border-color 0.2s ease;
         }
 
-        .menu-button:hover {
-          background: #e5e7eb;
+        .toolbar.dragging .toolbar-inner {
+          transform: scale(1.02);
+          border-color: rgba(255, 255, 255, 0.1);
         }
 
-        .menu-button:active {
-          background: #d1d5db;
+        /* Docked state */
+        .toolbar.docked .toolbar-inner {
+          border-radius: 8px 0 0 8px;
+          border-right-color: transparent;
         }
 
-        .menu-button svg {
-          width: 18px;
-          height: 18px;
+        /* Actions container - fixed width, clip when docked */
+        .actions {
+          display: flex;
+          align-items: center;
+          gap: 1px;
+          overflow: hidden;
+          transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                      opacity 0.2s ease;
+        }
+
+        .actions-inner {
+          display: flex;
+          align-items: center;
+          gap: 1px;
           flex-shrink: 0;
         }
 
-        .menu-button.active {
-          background: #dbeafe;
-          color: #1d4ed8;
+        /* Docked: collapse actions */
+        .toolbar.docked .actions {
+          width: 0;
+          opacity: 0;
         }
 
-        .menu-button.active:hover {
-          background: #bfdbfe;
+        /* Hover expand when docked */
+        .toolbar.docked:hover .actions {
+          width: 66px;
+          opacity: 1;
+        }
+
+        .toolbar.docked:hover .toolbar-inner {
+          border-radius: 8px;
+          border-right-color: rgba(255, 255, 255, 0.06);
+        }
+
+        .grip {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 14px;
+          height: 24px;
+          cursor: grab;
+          border-radius: 4px;
+          transition: background 0.15s ease;
+          flex-shrink: 0;
+        }
+
+        .grip:hover {
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .grip:active {
+          cursor: grabbing;
+        }
+
+        .grip-dots {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          opacity: 0.4;
+        }
+
+        .grip-dots span {
+          width: 3px;
+          height: 3px;
+          background: currentColor;
+          border-radius: 50%;
+          color: #a1a1aa;
+        }
+
+        .divider {
+          width: 1px;
+          height: 16px;
+          background: rgba(255, 255, 255, 0.08);
+          flex-shrink: 0;
+        }
+
+        .action-btn {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 24px;
+          padding: 0;
+          border: none;
+          background: transparent;
+          border-radius: 4px;
+          cursor: pointer;
+          flex-shrink: 0;
+          transition: background 0.15s ease,
+                      transform 0.12s ease;
+        }
+
+        .action-btn:hover {
+          background: rgba(255, 255, 255, 0.08);
+        }
+
+        .action-btn:active {
+          transform: scale(0.94);
+        }
+
+        .action-btn svg {
+          width: 14px;
+          height: 14px;
+          fill: #a1a1aa;
+          transition: fill 0.15s ease;
+        }
+
+        .action-btn:hover svg {
+          fill: #e4e4e7;
+        }
+
+        .action-btn.active {
+          background: rgba(99, 102, 241, 0.15);
+        }
+
+        .action-btn.active svg {
+          fill: #a5b4fc;
+        }
+
+        .action-btn.active:hover {
+          background: rgba(99, 102, 241, 0.25);
+        }
+
+        .action-btn.active:hover svg {
+          fill: #c7d2fe;
+        }
+
+        /* Tooltip */
+        .action-btn[data-tooltip]::after {
+          content: attr(data-tooltip);
+          position: absolute;
+          bottom: calc(100% + 6px);
+          left: 50%;
+          transform: translateX(-50%) translateY(4px);
+          padding: 4px 8px;
+          background: rgba(9, 9, 11, 0.95);
+          color: #e4e4e7;
+          font-size: 11px;
+          font-weight: 500;
+          white-space: nowrap;
+          border-radius: 4px;
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          opacity: 0;
+          pointer-events: none;
+          transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .action-btn:hover[data-tooltip]::after {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+        }
+
+        /* Success flash */
+        .action-btn.success svg {
+          fill: #4ade80;
         }
       </style>
 
-      <div class="widget-container">
-        <div class="widget-menu">
-          <button class="menu-button" id="dark-mode-btn">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3a9 9 0 109 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 01-4.4 2.26 5.403 5.403 0 01-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/>
-            </svg>
-            <span>Dark Mode</span>
-          </button>
-          <button class="menu-button" id="markdown-btn">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M20.56 18H3.44C2.65 18 2 17.37 2 16.59V7.41C2 6.63 2.65 6 3.44 6h17.12c.79 0 1.44.63 1.44 1.41v9.18c0 .78-.65 1.41-1.44 1.41M6.81 15.19v-3.66l1.92 2.35 1.92-2.35v3.66h1.93V8.81h-1.93l-1.92 2.35-1.92-2.35H4.89v6.38h1.92M19.69 12h-1.92V8.81h-1.92V12h-1.93l2.89 3.28L19.69 12z"/>
-            </svg>
-            <span>To Markdown</span>
-          </button>
+      <div class="toolbar">
+        <div class="toolbar-inner">
+          <div class="grip">
+            <div class="grip-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+          <div class="actions">
+            <div class="actions-inner">
+              <div class="divider"></div>
+              <button class="action-btn" id="dark-mode-btn" data-tooltip="Dark Mode">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3a9 9 0 109 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 01-4.4 2.26 5.403 5.403 0 01-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/>
+                </svg>
+              </button>
+              <button class="action-btn" id="markdown-btn" data-tooltip="Copy Markdown">
+                <svg viewBox="0 0 24 24">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14H8v-4H6v4H4v-6h2v2h2v-2h2v6zm4 0h-2V9h2v8zm4-4h-2v4h-2v-6h4v2z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
-        <button class="widget-fab" id="fab-btn">
-          <svg viewBox="0 0 24 24">
-            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-          </svg>
-        </button>
       </div>
     `;
 
-    // Add event listeners
     this.setupEventListeners();
-
-    // Append to body
     document.body.appendChild(this.container);
+    
+    this.initPosition();
+  }
+
+  async initPosition() {
+    const state = await this.loadState();
+    const toolbar = this.shadowRoot.querySelector('.toolbar');
+    
+    if (state.position) {
+      this.position = state.position;
+      this.isDocked = state.isDocked || false;
+    } else {
+      this.position = {
+        x: window.innerWidth - this.TOOLBAR_WIDTH - this.EDGE_MARGIN,
+        y: window.innerHeight - 60
+      };
+    }
+
+    this.clampPosition();
+    this.updateToolbarPosition();
+    
+    if (this.isDocked) {
+      toolbar.classList.add('docked');
+    }
+  }
+
+  clampPosition() {
+    const height = 32;
+    const width = this.isDocked ? 24 : this.TOOLBAR_WIDTH;
+    
+    this.position.x = Math.max(this.EDGE_MARGIN, 
+      Math.min(window.innerWidth - width - this.EDGE_MARGIN, this.position.x));
+    this.position.y = Math.max(this.EDGE_MARGIN, 
+      Math.min(window.innerHeight - height - this.EDGE_MARGIN, this.position.y));
+  }
+
+  updateToolbarPosition() {
+    const toolbar = this.shadowRoot.querySelector('.toolbar');
+    if (!toolbar) return;
+    
+    if (this.isDocked) {
+      toolbar.style.right = '0';
+      toolbar.style.left = 'auto';
+      toolbar.style.top = `${this.position.y}px`;
+    } else {
+      toolbar.style.left = `${this.position.x}px`;
+      toolbar.style.top = `${this.position.y}px`;
+      toolbar.style.right = 'auto';
+    }
   }
 
   setupEventListeners() {
-    const fabBtn = this.shadowRoot.getElementById('fab-btn');
-    const menu = this.shadowRoot.querySelector('.widget-menu');
+    const toolbar = this.shadowRoot.querySelector('.toolbar');
+    const grip = this.shadowRoot.querySelector('.grip');
     const darkModeBtn = this.shadowRoot.getElementById('dark-mode-btn');
     const markdownBtn = this.shadowRoot.getElementById('markdown-btn');
 
-    fabBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.isExpanded = !this.isExpanded;
-      menu.classList.toggle('expanded', this.isExpanded);
-      fabBtn.classList.toggle('expanded', this.isExpanded);
-    });
+    // Drag handling
+    grip.addEventListener('mousedown', this.startDrag.bind(this));
+    document.addEventListener('mousemove', this.onDrag.bind(this));
+    document.addEventListener('mouseup', this.endDrag.bind(this));
 
+    // Touch support
+    grip.addEventListener('touchstart', this.startDrag.bind(this), { passive: false });
+    document.addEventListener('touchmove', this.onDrag.bind(this), { passive: false });
+    document.addEventListener('touchend', this.endDrag.bind(this));
+
+    // Action buttons
     darkModeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const isActive = this.options.onDarkModeToggle();
@@ -184,33 +366,137 @@ class ReadtilsWidget {
     markdownBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.options.onConvertMarkdown();
+      
+      // Visual feedback
+      markdownBtn.classList.add('success');
+      setTimeout(() => markdownBtn.classList.remove('success'), 500);
     });
 
-    // Close menu when clicking outside
-    document.addEventListener('click', (e) => {
-      if (this.isExpanded && !this.container.contains(e.target)) {
-        this.isExpanded = false;
-        menu.classList.remove('expanded');
-        fabBtn.classList.remove('expanded');
-      }
+    // Window resize
+    window.addEventListener('resize', () => {
+      this.clampPosition();
+      this.updateToolbarPosition();
     });
   }
 
+  startDrag(e) {
+    e.preventDefault();
+    
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    // If docked, undock first and calculate proper position
+    if (this.isDocked) {
+      const toolbar = this.shadowRoot.querySelector('.toolbar');
+      toolbar.classList.remove('docked');
+      this.isDocked = false;
+      
+      // Set position near the right edge where user clicked
+      this.position.x = window.innerWidth - this.TOOLBAR_WIDTH - this.EDGE_MARGIN;
+      this.position.y = clientY - 16; // Center on cursor
+      this.clampPosition();
+      this.updateToolbarPosition();
+    }
+    
+    this.isDragging = true;
+    
+    const toolbar = this.shadowRoot.querySelector('.toolbar');
+    toolbar.classList.add('dragging');
+
+    this.dragOffset = {
+      x: clientX - this.position.x,
+      y: clientY - this.position.y
+    };
+    
+    this.lastMousePos = { x: clientX, y: clientY };
+    this.lastMoveTime = Date.now();
+    this.velocity = { x: 0, y: 0 };
+  }
+
+  onDrag(e) {
+    if (!this.isDragging) return;
+    e.preventDefault();
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    const now = Date.now();
+    const dt = Math.max(1, now - this.lastMoveTime);
+    
+    this.velocity = {
+      x: (clientX - this.lastMousePos.x) / dt * 16,
+      y: (clientY - this.lastMousePos.y) / dt * 16
+    };
+
+    this.lastMousePos = { x: clientX, y: clientY };
+    this.lastMoveTime = now;
+
+    this.position = {
+      x: clientX - this.dragOffset.x,
+      y: clientY - this.dragOffset.y
+    };
+
+    this.clampPosition();
+    this.updateToolbarPosition();
+  }
+
+  endDrag(e) {
+    if (!this.isDragging) return;
+    this.isDragging = false;
+
+    const toolbar = this.shadowRoot.querySelector('.toolbar');
+    toolbar.classList.remove('dragging');
+
+    const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+    
+    // Check if thrown to right edge
+    const distFromRight = window.innerWidth - clientX;
+    const throwingRight = this.velocity.x > 3;
+    
+    if (distFromRight < this.DOCK_THRESHOLD || throwingRight) {
+      this.dock();
+    } else {
+      this.saveState();
+    }
+  }
+
+  dock() {
+    this.isDocked = true;
+    const toolbar = this.shadowRoot.querySelector('.toolbar');
+    toolbar.classList.add('docked');
+    this.position.x = window.innerWidth;
+    this.updateToolbarPosition();
+    this.saveState();
+  }
+
+  undock() {
+    this.isDocked = false;
+    const toolbar = this.shadowRoot.querySelector('.toolbar');
+    toolbar.classList.remove('docked');
+    
+    this.position.x = window.innerWidth - this.TOOLBAR_WIDTH - this.EDGE_MARGIN;
+    this.clampPosition();
+    this.updateToolbarPosition();
+    this.saveState();
+  }
+
   show() {
+    if (this.isVisible) {
+      if (this.isDocked) {
+        this.undock();
+      }
+      return;
+    }
+    
     this.isVisible = true;
-    const container = this.shadowRoot.querySelector('.widget-container');
-    container.classList.add('visible');
+    const toolbar = this.shadowRoot.querySelector('.toolbar');
+    toolbar.classList.add('visible');
   }
 
   hide() {
     this.isVisible = false;
-    this.isExpanded = false;
-    const container = this.shadowRoot.querySelector('.widget-container');
-    const menu = this.shadowRoot.querySelector('.widget-menu');
-    const fabBtn = this.shadowRoot.getElementById('fab-btn');
-    container.classList.remove('visible');
-    menu.classList.remove('expanded');
-    fabBtn.classList.remove('expanded');
+    const toolbar = this.shadowRoot.querySelector('.toolbar');
+    toolbar.classList.remove('visible');
   }
 
   toggle() {
@@ -233,5 +519,4 @@ class ReadtilsWidget {
   }
 }
 
-// Export for use in content.js
 window.ReadtilsWidget = ReadtilsWidget;
