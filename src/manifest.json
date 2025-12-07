@@ -3,39 +3,40 @@
   "name": "Readtils",
   "version": "1.0.0",
   "description": "Reading utilities - Dark mode toggle and page to markdown conversion",
-
   "permissions": [
     "activeTab",
     "storage",
     "clipboardWrite"
   ],
-
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-
   "background": {
     "service_worker": "background/background.js",
-    "scripts": ["background/background.js"]
+    "scripts": [
+      "background/background.js"
+    ]
   },
-
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "<all_urls>"
+      ],
       "js": [
         "lib/browser-polyfill.min.js",
         "lib/turndown.min.js",
+        "content/toast.js",
         "content/darkmode.js",
         "content/markdown.js",
+        "content/colorpicker.js",
         "content/widget.js",
         "content/content.js"
       ],
       "run_at": "document_idle"
     }
   ],
-
   "action": {
     "default_icon": {
       "16": "icons/icon-16.png",

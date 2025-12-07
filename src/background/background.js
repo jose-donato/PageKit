@@ -21,12 +21,23 @@
       api.storage.local.get('readtils_state').then(result => {
         sendResponse(result.readtils_state || {});
       });
-      return true; // Keep channel open for async response
+      return true;
     }
 
     if (message.action === 'setState') {
       api.storage.local.set({ readtils_state: message.state });
       sendResponse({ success: true });
+      return true;
+    }
+
+    if (message.action === 'captureTab') {
+      api.tabs.captureVisibleTab(null, { format: 'png' })
+        .then(dataUrl => {
+          sendResponse({ success: true, dataUrl });
+        })
+        .catch(err => {
+          sendResponse({ success: false, error: err.message });
+        });
       return true;
     }
   });
