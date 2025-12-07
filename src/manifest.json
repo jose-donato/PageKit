@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Readtils",
+  "name": "PageKit",
   "version": "1.0.0",
-  "description": "Reading utilities - Dark mode toggle and page to markdown conversion",
+  "description": "Minimal web utilities - dark mode, page to markdown, and color picker",
   "permissions": [
     "activeTab",
     "storage",
@@ -42,6 +42,6 @@
       "16": "icons/icon-16.png",
       "48": "icons/icon-48.png"
     },
-    "default_title": "Toggle Readtils"
+    "default_title": "PageKit"
   }
 }

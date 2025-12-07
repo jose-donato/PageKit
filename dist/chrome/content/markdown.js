@@ -91,7 +91,7 @@ ${markdown}
 
     // Copy to clipboard and show notification
     copyToClipboard(fullMarkdown);
-    showNotification('Markdown copied to clipboard!');
+    Toast.success('Markdown copied to clipboard');
 
     return fullMarkdown;
   }
@@ -115,49 +115,6 @@ ${markdown}
       }
       document.body.removeChild(textarea);
     }
-  }
-
-  function showNotification(message) {
-    // Create a simple notification in the page
-    const notification = document.createElement('div');
-    notification.id = 'readtils-notification';
-    notification.style.cssText = `
-      position: fixed;
-      bottom: 80px;
-      right: 20px;
-      padding: 12px 20px;
-      background: #10b981;
-      color: white;
-      border-radius: 8px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      z-index: 2147483647;
-      opacity: 0;
-      transform: translateX(20px);
-      transition: opacity 0.2s, transform 0.2s;
-    `;
-    notification.textContent = message;
-
-    document.body.appendChild(notification);
-
-    // Trigger animation
-    requestAnimationFrame(() => {
-      notification.style.opacity = '1';
-      notification.style.transform = 'translateX(0)';
-    });
-
-    // Remove after delay
-    setTimeout(() => {
-      notification.style.opacity = '0';
-      notification.style.transform = 'translateX(20px)';
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.remove();
-        }
-      }, 200);
-    }, 2000);
   }
 
   return {

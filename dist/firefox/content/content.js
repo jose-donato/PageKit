@@ -20,7 +20,8 @@
     // Create the widget (hidden by default)
     widget = new ReadtilsWidget({
       onDarkModeToggle: () => DarkMode.toggle(),
-      onConvertMarkdown: () => MarkdownConverter.convert()
+      onConvertMarkdown: () => MarkdownConverter.convert(),
+      onPickColor: () => ColorPicker.pick()
     });
     widget.render();
 

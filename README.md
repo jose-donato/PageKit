@@ -1,18 +1,19 @@
-# Readtils
+# PageKit
 
-A minimalistic browser extension for Chrome and Firefox with reading utilities: dark mode toggle and page-to-markdown conversion.
+A minimal browser extension for Chrome and Firefox with essential web utilities: dark mode, page-to-markdown conversion, and color picker.
 
 ## Features
 
 - **Dark Mode** - Toggle any webpage to dark mode using smart CSS inversion. Preserves images and videos. Remembers your preference per-site.
-- **Page to Markdown** - Convert the current page content to Markdown and copy to clipboard. Useful for saving articles, documentation, or any web content.
+- **Page to Markdown** - Convert the current page content to Markdown and copy to clipboard. Great for saving articles, documentation, or any web content.
+- **Color Picker** - Pick any color from the page and copy the hex code to clipboard. Uses native EyeDropper API on Chrome, canvas fallback on Firefox.
 
 ## Installation
 
 ### Chrome
 
 1. Download or clone this repository
-2. Run `npm run build` (or just use the pre-built `dist/chrome` folder)
+2. Run `pnpm run build` (or just use the pre-built `dist/chrome` folder)
 3. Open `chrome://extensions`
 4. Enable "Developer mode" (top right)
 5. Click "Load unpacked"
@@ -21,7 +22,7 @@ A minimalistic browser extension for Chrome and Firefox with reading utilities: 
 ### Firefox
 
 1. Download or clone this repository
-2. Run `npm run build` (or just use the pre-built `dist/firefox` folder)
+2. Run `pnpm run build` (or just use the pre-built `dist/firefox` folder)
 3. Open `about:debugging`
 4. Click "This Firefox"
 5. Click "Load Temporary Add-on"
@@ -29,40 +30,42 @@ A minimalistic browser extension for Chrome and Firefox with reading utilities: 
 
 ## Usage
 
-1. Click the Readtils icon in your browser toolbar
-2. A floating button appears in the bottom-right corner
-3. Click the button to expand the menu
-4. Choose an action:
-   - **Dark Mode** - Toggle dark mode on/off for the current site
-   - **To Markdown** - Convert page to Markdown (copied to clipboard)
+1. Click the PageKit icon in your browser toolbar
+2. A minimal toolbar appears - drag to reposition, throw to the right edge to dock
+3. Click any tool:
+   - **🌙 Dark Mode** - Toggle dark mode on/off for the current site
+   - **📋 Markdown** - Convert page to Markdown (copied to clipboard)
+   - **🎨 Color Picker** - Pick any color from the page
 
 ## Building
 
 ```bash
-# Install dependencies (only needed for build script)
-npm install
+# Install dependencies
+pnpm install
 
 # Build for both browsers
-npm run build
+pnpm run build
 
 # Package as .zip files
-npm run package:chrome
-npm run package:firefox
+pnpm run package:chrome
+pnpm run package:firefox
 ```
 
 ## Project Structure
 
 ```
-readtils-extension/
+pagekit/
 ├── src/
-│   ├── manifest.json           # Extension manifest (unified)
+│   ├── manifest.json           # Extension manifest
 │   ├── background/
-│   │   └── background.js       # Handles toolbar icon clicks
+│   │   └── background.js       # Handles toolbar icon clicks, tab capture
 │   ├── content/
 │   │   ├── content.js          # Main entry point
-│   │   ├── widget.js           # Floating UI (Shadow DOM)
+│   │   ├── widget.js           # Draggable toolbar (Shadow DOM)
+│   │   ├── toast.js            # Toast notifications
 │   │   ├── darkmode.js         # Dark mode logic
-│   │   └── markdown.js         # Markdown conversion
+│   │   ├── markdown.js         # Markdown conversion
+│   │   └── colorpicker.js      # Color picker (EyeDropper + canvas fallback)
 │   ├── lib/
 │   │   ├── browser-polyfill.min.js
 │   │   └── turndown.min.js
@@ -77,9 +80,17 @@ readtils-extension/
 
 ## How It Works
 
+### Toolbar
+
+The toolbar is a minimal, draggable widget that:
+- Appears when you click the extension icon
+- Can be dragged to any position on the page
+- Docks to the right edge when thrown there (hover to expand)
+- Persists position across page loads
+
 ### Dark Mode
 
-Uses CSS filter inversion with hue rotation to create a dark theme:
+Uses CSS filter inversion with hue rotation:
 
 ```css
 html {
@@ -91,17 +102,22 @@ Images and videos are re-inverted to preserve their original appearance. Per-sit
 
 ### Markdown Conversion
 
-Uses [Turndown](https://github.com/mixmark-io/turndown) to convert HTML to Markdown. The extension:
+Uses [Turndown](https://github.com/mixmark-io/turndown) to convert HTML to Markdown:
 
 1. Finds the main content area (article, main, or body)
 2. Removes non-content elements (scripts, nav, ads, etc.)
 3. Converts to Markdown with metadata (title, URL, date)
 4. Copies to clipboard
 
+### Color Picker
+
+- **Chrome/Edge**: Uses native EyeDropper API for seamless color picking
+- **Firefox**: Falls back to canvas-based picking with a magnifier overlay
+
 ## Technical Details
 
 - **Manifest V3** - Uses the latest extension manifest format
-- **Shadow DOM** - Widget styles are isolated from page CSS
+- **Shadow DOM** - Widget and toast styles are isolated from page CSS
 - **Cross-browser** - Single codebase works on Chrome and Firefox
 - **No build tools** - Plain JavaScript, no webpack/bundler required
 
