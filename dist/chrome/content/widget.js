@@ -106,9 +106,9 @@ class ReadtilsWidget {
           display: flex;
           align-items: center;
           gap: 1px;
-          overflow: hidden;
-          transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+          transition: max-width 0.25s cubic-bezier(0.16, 1, 0.3, 1),
                       opacity 0.2s ease;
+          max-width: 200px;
         }
 
         .actions-inner {
@@ -120,14 +120,16 @@ class ReadtilsWidget {
 
         /* Docked: collapse actions */
         .toolbar.docked .actions {
-          width: 0;
+          max-width: 0;
           opacity: 0;
+          overflow: hidden;
         }
 
         /* Hover expand when docked */
         .toolbar.docked:hover .actions {
-          width: 152px;
+          max-width: 200px;
           opacity: 1;
+          overflow: visible;
         }
 
         .toolbar.docked:hover .toolbar-inner {
