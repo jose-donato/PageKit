@@ -1,12 +1,14 @@
 # PageKit
 
-A minimal browser extension for Chrome and Firefox with essential web utilities: dark mode, page-to-markdown conversion, and color picker.
+A minimal browser extension for Chrome and Firefox with essential web utilities: dark mode, page-to-markdown conversion, color picker, metadata viewer, and YouTube transcript extraction.
 
 ## Features
 
 - **Dark Mode** - Toggle any webpage to dark mode using smart CSS inversion. Preserves images and videos. Remembers your preference per-site.
 - **Page to Markdown** - Convert the current page content to Markdown and copy to clipboard. Great for saving articles, documentation, or any web content.
 - **Color Picker** - Pick any color from the page and copy the hex code to clipboard. Uses native EyeDropper API on Chrome, canvas fallback on Firefox.
+- **Page Info** - View comprehensive page metadata including Open Graph tags, Twitter Cards, and JSON-LD schema data.
+- **YouTube Transcript** - Extract transcripts from YouTube videos with optional timestamps. Copy to clipboard or download as Markdown.
 
 ## Installation
 
@@ -33,9 +35,11 @@ A minimal browser extension for Chrome and Firefox with essential web utilities:
 1. Click the PageKit icon in your browser toolbar
 2. A minimal toolbar appears - drag to reposition, throw to the right edge to dock
 3. Click any tool:
-   - **🌙 Dark Mode** - Toggle dark mode on/off for the current site
-   - **📋 Markdown** - Convert page to Markdown (copied to clipboard)
-   - **🎨 Color Picker** - Pick any color from the page
+   - **Dark Mode** - Toggle dark mode on/off for the current site
+   - **Markdown** - Convert page to Markdown (copied to clipboard)
+   - **Color Picker** - Pick any color from the page
+   - **Page Info** - View page metadata in a panel
+   - **YouTube Transcript** - Extract video transcript (only on YouTube)
 
 ## Building
 
