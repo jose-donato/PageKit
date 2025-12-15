@@ -22,13 +22,19 @@
       onDarkModeToggle: () => DarkMode.toggle(),
       onConvertMarkdown: () => MarkdownConverter.convert(),
       onPickColor: () => ColorPicker.pick(),
-      onViewMetadata: () => MetadataViewer.toggle()
+      onViewMetadata: () => MetadataViewer.toggle(),
+      onExtractTranscript: () => TranscriptExtractor.extract()
     });
     widget.render();
 
     // Update dark mode button if it was restored
     if (darkModeActive) {
       widget.updateDarkModeButton(true);
+    }
+
+    // Enable transcript button if on YouTube
+    if (TranscriptExtractor.isYouTubePage()) {
+      widget.updateTranscriptButton(true);
     }
   }
 

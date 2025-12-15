@@ -18,7 +18,7 @@ class ReadtilsWidget {
     // Edge detection
     this.DOCK_THRESHOLD = 60;
     this.EDGE_MARGIN = 16;
-    this.TOOLBAR_WIDTH = 168;
+    this.TOOLBAR_WIDTH = 196;
     
     // Storage key
     this.STORAGE_KEY = 'readtils_widget_state';
@@ -126,7 +126,7 @@ class ReadtilsWidget {
 
         /* Hover expand when docked */
         .toolbar.docked:hover .actions {
-          width: 124px;
+          width: 152px;
           opacity: 1;
         }
 
@@ -258,6 +258,20 @@ class ReadtilsWidget {
         .action-btn.success svg {
           fill: #4ade80;
         }
+
+        /* Disabled state */
+        .action-btn:disabled {
+          cursor: not-allowed;
+          opacity: 0.35;
+        }
+
+        .action-btn:disabled:hover {
+          background: transparent;
+        }
+
+        .action-btn:disabled svg {
+          fill: #71717a;
+        }
       </style>
 
       <div class="toolbar">
@@ -290,6 +304,11 @@ class ReadtilsWidget {
               <button class="action-btn" id="metadata-btn" data-tooltip="Page Info">
                 <svg viewBox="0 0 24 24">
                   <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zm-3-7H9v-2h6v2zm0 4H9v-2h6v2z"/>
+                </svg>
+              </button>
+              <button class="action-btn" id="transcript-btn" data-tooltip="YouTube Transcript" disabled>
+                <svg viewBox="0 0 24 24">
+                  <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6v-2zm0 4h8v2H6v-2zm10 0h2v2h-2v-2zm-6-4h8v2h-8v-2z"/>
                 </svg>
               </button>
             </div>
@@ -363,6 +382,7 @@ class ReadtilsWidget {
     const markdownBtn = this.shadowRoot.getElementById('markdown-btn');
     const colorpickerBtn = this.shadowRoot.getElementById('colorpicker-btn');
     const metadataBtn = this.shadowRoot.getElementById('metadata-btn');
+    const transcriptBtn = this.shadowRoot.getElementById('transcript-btn');
 
     // Drag handling
     grip.addEventListener('mousedown', this.startDrag.bind(this));
@@ -415,6 +435,12 @@ class ReadtilsWidget {
     metadataBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.options.onViewMetadata();
+    });
+
+    transcriptBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (transcriptBtn.disabled) return;
+      this.options.onExtractTranscript();
     });
 
     // Window resize
@@ -557,6 +583,11 @@ class ReadtilsWidget {
   updateDarkModeButton(isActive) {
     const darkModeBtn = this.shadowRoot.getElementById('dark-mode-btn');
     darkModeBtn.classList.toggle('active', isActive);
+  }
+
+  updateTranscriptButton(isEnabled) {
+    const transcriptBtn = this.shadowRoot.getElementById('transcript-btn');
+    transcriptBtn.disabled = !isEnabled;
   }
 
   destroy() {

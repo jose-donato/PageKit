@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "PageKit",
   "version": "1.0.0",
-  "description": "Minimal web utilities - dark mode, page to markdown, color picker, and metadata viewer",
+  "description": "Minimal web utilities - dark mode, page to markdown, color picker, metadata viewer, and YouTube transcript",
   "permissions": [
     "activeTab",
     "storage",
@@ -31,6 +31,7 @@
         "content/markdown.js",
         "content/colorpicker.js",
         "content/metadata.js",
+        "content/transcript.js",
         "content/widget.js",
         "content/content.js"
       ],
