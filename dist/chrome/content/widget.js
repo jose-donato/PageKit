@@ -39,7 +39,8 @@ class ReadtilsWidget {
       await this.api.storage.local.set({
         [this.STORAGE_KEY]: {
           position: this.position,
-          isDocked: this.isDocked
+          isDocked: this.isDocked,
+          isVisible: this.isVisible
         }
       });
     } catch (e) {}
@@ -306,7 +307,7 @@ class ReadtilsWidget {
   async initPosition() {
     const state = await this.loadState();
     const toolbar = this.shadowRoot.querySelector('.toolbar');
-    
+
     if (state.position) {
       this.position = state.position;
       this.isDocked = state.isDocked || false;
@@ -319,9 +320,14 @@ class ReadtilsWidget {
 
     this.clampPosition();
     this.updateToolbarPosition();
-    
+
     if (this.isDocked) {
       toolbar.classList.add('docked');
+    }
+
+    if (state.isVisible) {
+      this.isVisible = true;
+      toolbar.classList.add('visible');
     }
   }
 
@@ -526,16 +532,18 @@ class ReadtilsWidget {
       }
       return;
     }
-    
+
     this.isVisible = true;
     const toolbar = this.shadowRoot.querySelector('.toolbar');
     toolbar.classList.add('visible');
+    this.saveState();
   }
 
   hide() {
     this.isVisible = false;
     const toolbar = this.shadowRoot.querySelector('.toolbar');
     toolbar.classList.remove('visible');
+    this.saveState();
   }
 
   toggle() {
