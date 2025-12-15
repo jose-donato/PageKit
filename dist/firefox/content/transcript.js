@@ -19,46 +19,63 @@ const TranscriptExtractor = (function() {
     return titleEl?.textContent?.trim() || document.title.replace(' - YouTube', '').trim();
   }
 
-  function extractYtInitialData() {
+  function parseYtInitialDataFromText(text) {
+    const match = text.match(/ytInitialData\s*=\s*(\{)/);
+    if (!match) return null;
+
+    const startIndex = match.index + match[0].length - 1;
+    let braceCount = 0;
+    let endIndex = startIndex;
+
+    for (let i = startIndex; i < text.length; i++) {
+      if (text[i] === '{') braceCount++;
+      else if (text[i] === '}') {
+        braceCount--;
+        if (braceCount === 0) {
+          endIndex = i + 1;
+          break;
+        }
+      }
+    }
+
+    try {
+      return JSON.parse(text.substring(startIndex, endIndex));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function extractYtInitialDataFromDOM() {
     const scripts = document.querySelectorAll('script');
 
     for (const script of scripts) {
       const text = script.textContent || '';
-
-      // Look for ytInitialData assignment
       if (text.includes('var ytInitialData =') || text.includes('ytInitialData =')) {
-        // Find the start of the JSON object
-        const match = text.match(/ytInitialData\s*=\s*(\{)/);
-        if (!match) continue;
-
-        const startIndex = match.index + match[0].length - 1;
-        let braceCount = 0;
-        let endIndex = startIndex;
-
-        for (let i = startIndex; i < text.length; i++) {
-          if (text[i] === '{') braceCount++;
-          else if (text[i] === '}') {
-            braceCount--;
-            if (braceCount === 0) {
-              endIndex = i + 1;
-              break;
-            }
-          }
-        }
-
-        try {
-          const jsonStr = text.substring(startIndex, endIndex);
-          return JSON.parse(jsonStr);
-        } catch (e) {
-          continue;
-        }
+        const data = parseYtInitialDataFromText(text);
+        if (data) return data;
       }
     }
     return null;
   }
 
-  function getTranscriptParams() {
-    const ytInitialData = extractYtInitialData();
+  async function fetchFreshYtInitialData() {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('_cb', Date.now()); // Cache buster
+      const response = await fetch(url.toString(), {
+        credentials: 'include',
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      if (!response.ok) return null;
+      const html = await response.text();
+      return parseYtInitialDataFromText(html);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function extractParamsFromYtInitialData(ytInitialData) {
     if (!ytInitialData) return null;
 
     const panels = ytInitialData.engagementPanels;
@@ -73,13 +90,24 @@ const TranscriptExtractor = (function() {
       ?.getTranscriptEndpoint?.params || null;
   }
 
+  async function getTranscriptParams() {
+    // Always fetch fresh data first (handles SPA navigation reliably)
+    let ytInitialData = await fetchFreshYtInitialData();
+    let params = extractParamsFromYtInitialData(ytInitialData);
+    if (params) return params;
+
+    // Fallback to DOM if fresh fetch failed
+    ytInitialData = extractYtInitialDataFromDOM();
+    return extractParamsFromYtInitialData(ytInitialData);
+  }
+
   async function fetchTranscriptData() {
     const videoId = getVideoId();
     if (!videoId) {
       throw new Error('Could not find video ID');
     }
 
-    const params = getTranscriptParams();
+    const params = await getTranscriptParams();
     if (!params) {
       throw new Error('No transcript available for this video');
     }
@@ -100,7 +128,7 @@ const TranscriptExtractor = (function() {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch transcript');
+      throw new Error('Failed to fetch transcript. Try refreshing the page.');
     }
 
     const data = await response.json();
