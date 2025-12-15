@@ -69,7 +69,9 @@ pagekit/
 │   │   ├── toast.js            # Toast notifications
 │   │   ├── darkmode.js         # Dark mode logic
 │   │   ├── markdown.js         # Markdown conversion
-│   │   └── colorpicker.js      # Color picker (EyeDropper + canvas fallback)
+│   │   ├── colorpicker.js      # Color picker (EyeDropper + canvas fallback)
+│   │   ├── metadata.js         # Page metadata viewer
+│   │   └── transcript.js       # YouTube transcript extraction
 │   ├── lib/
 │   │   ├── browser-polyfill.min.js
 │   │   └── turndown.min.js
@@ -117,6 +119,22 @@ Uses [Turndown](https://github.com/mixmark-io/turndown) to convert HTML to Markd
 
 - **Chrome/Edge**: Uses native EyeDropper API for seamless color picking
 - **Firefox**: Falls back to canvas-based picking with a magnifier overlay
+
+### Page Info
+
+Extracts and displays comprehensive page metadata:
+- Open Graph tags (title, description, image)
+- Twitter Card data
+- JSON-LD structured data
+- Basic meta tags
+
+### YouTube Transcript
+
+Extracts transcripts from YouTube videos using YouTube's internal API:
+1. Fetches fresh page data to get transcript parameters
+2. Calls YouTube's transcript endpoint
+3. Parses segments with timestamps
+4. Offers copy to clipboard or download as Markdown
 
 ## Technical Details
 
