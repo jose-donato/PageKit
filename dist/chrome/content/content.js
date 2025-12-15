@@ -21,7 +21,8 @@
     widget = new ReadtilsWidget({
       onDarkModeToggle: () => DarkMode.toggle(),
       onConvertMarkdown: () => MarkdownConverter.convert(),
-      onPickColor: () => ColorPicker.pick()
+      onPickColor: () => ColorPicker.pick(),
+      onViewMetadata: () => MetadataViewer.toggle()
     });
     widget.render();
 

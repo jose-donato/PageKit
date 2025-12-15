@@ -6,7 +6,7 @@ class ReadtilsWidget {
     this.isDocked = false;
     this.container = null;
     this.shadowRoot = null;
-    
+
     // Position state
     this.position = { x: 0, y: 0 };
     this.isDragging = false;
@@ -14,11 +14,11 @@ class ReadtilsWidget {
     this.velocity = { x: 0, y: 0 };
     this.lastMousePos = { x: 0, y: 0 };
     this.lastMoveTime = 0;
-    
+
     // Edge detection
     this.DOCK_THRESHOLD = 60;
     this.EDGE_MARGIN = 16;
-    this.TOOLBAR_WIDTH = 138;
+    this.TOOLBAR_WIDTH = 168;
     
     // Storage key
     this.STORAGE_KEY = 'readtils_widget_state';
@@ -125,7 +125,7 @@ class ReadtilsWidget {
 
         /* Hover expand when docked */
         .toolbar.docked:hover .actions {
-          width: 94px;
+          width: 124px;
           opacity: 1;
         }
 
@@ -286,6 +286,11 @@ class ReadtilsWidget {
                   <path d="M20.71 5.63l-2.34-2.34a1 1 0 00-1.41 0l-3.12 3.12-1.42-1.42-1.41 1.42 1.41 1.41-7.78 7.78a2 2 0 00-.59 1.42v2.34a1 1 0 001 1h2.34a2 2 0 001.42-.59l7.78-7.78 1.41 1.41 1.42-1.41-1.42-1.42 3.12-3.12a1 1 0 00.09-1.32zM6.41 19H5v-1.41l7.78-7.78 1.41 1.41L6.41 19z"/>
                 </svg>
               </button>
+              <button class="action-btn" id="metadata-btn" data-tooltip="Page Info">
+                <svg viewBox="0 0 24 24">
+                  <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zm-3-7H9v-2h6v2zm0 4H9v-2h6v2z"/>
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -351,6 +356,7 @@ class ReadtilsWidget {
     const darkModeBtn = this.shadowRoot.getElementById('dark-mode-btn');
     const markdownBtn = this.shadowRoot.getElementById('markdown-btn');
     const colorpickerBtn = this.shadowRoot.getElementById('colorpicker-btn');
+    const metadataBtn = this.shadowRoot.getElementById('metadata-btn');
 
     // Drag handling
     grip.addEventListener('mousedown', this.startDrag.bind(this));
@@ -381,13 +387,13 @@ class ReadtilsWidget {
     colorpickerBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const result = await this.options.onPickColor();
-      
+
       if (result.success) {
         // Update tooltip temporarily to show picked color
         const originalTooltip = colorpickerBtn.getAttribute('data-tooltip');
         colorpickerBtn.setAttribute('data-tooltip', `Copied ${result.color}`);
         colorpickerBtn.classList.add('success');
-        
+
         setTimeout(() => {
           colorpickerBtn.classList.remove('success');
           colorpickerBtn.setAttribute('data-tooltip', originalTooltip);
@@ -398,6 +404,11 @@ class ReadtilsWidget {
           colorpickerBtn.setAttribute('data-tooltip', 'Pick Color');
         }, 2000);
       }
+    });
+
+    metadataBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.options.onViewMetadata();
     });
 
     // Window resize
